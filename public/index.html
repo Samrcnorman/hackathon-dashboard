@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zinc Hackathon — Hours Saved</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* ============================================================
+       BASE
+    ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* EDIT THESE colours if needed */
+      --bg: #1a1a2e;
+      --teal: #00BCD4;
+      --amber: #F5A623;
+      --amber-dark: #d4881a;
+      --foam: #f5f0e8;
+      --gold: #FFD700;
+      --text: #e8e8f0;
+      --pill-bg: rgba(0,188,212,0.15);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-x: hidden;
+      transition: background 1s ease;
+    }
+
+    body.complete {
+      background: #1a1400;
+    }
+
+    /* ============================================================
+       HEADER
+    ============================================================ */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 800;
+      color: var(--teal);
+      letter-spacing: -0.02em;
+    }
+
+    .header .subtitle {
+      font-size: 1rem;
+      opacity: 0.6;
+      margin-top: 4px;
+    }
+
+    /* ============================================================
+       HOURS COUNTER
+    ============================================================ */
+    .counter {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .counter .hours-num {
+      font-size: clamp(3rem, 8vw, 6rem);
+      font-weight: 800;
+      color: var(--amber);
+      line-height: 1;
+      transition: color 1s ease;
+    }
+
+    body.complete .counter .hours-num {
+      color: var(--gold);
+    }
+
+    .counter .hours-label {
+      font-size: 1.2rem;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+
+    .counter .target {
+      font-size: 0.9rem;
+      color: var(--teal);
+      margin-top: 6px;
+    }
+
+    /* ============================================================
+       PINT GLASS
+    ============================================================ */
+    .glass-wrapper {
+      position: relative;
+      width: 220px;
+      height: 420px;
+      margin: 0 auto 32px;
+    }
+
+    /* The SVG glass outline + fill live here */
+    .glass-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+    }
+
+    /* Beer fill rect — animated via JS changing height/y */
+    #beer-fill {
+      fill: var(--amber);
+      transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+                  y 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Foam on top of beer */
+    #foam-fill {
+      fill: var(--foam);
+      opacity: 0;
+      transition: opacity 0.5s ease, height 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+                  y 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Bubbles */
+    .bubble {
+      fill: rgba(255,255,255,0.35);
+      animation: rise linear infinite;
+    }
+
+    @keyframes rise {
+      0%   { transform: translateY(0px);   opacity: 0.4; }
+      80%  { opacity: 0.4; }
+      100% { transform: translateY(-280px); opacity: 0; }
+    }
+
+    /* Overflow drip when complete */
+    #overflow {
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    body.complete #overflow { opacity: 1; }
+
+    /* ============================================================
+       CELEBRATION MESSAGE
+    ============================================================ */
+    .celebration {
+      display: none;
+      text-align: center;
+      font-size: clamp(1.4rem, 3vw, 2.2rem);
+      font-weight: 800;
+      color: var(--gold);
+      animation: pulse 1s ease-in-out infinite alternate;
+      margin-bottom: 24px;
+    }
+
+    body.complete .celebration { display: block; }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to   { transform: scale(1.04); }
+    }
+
+    /* ============================================================
+       PROJECT PILLS
+    ============================================================ */
+    .projects {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      max-width: 700px;
+      margin: 0 auto 32px;
+    }
+
+    .project-pill {
+      background: var(--pill-bg);
+      border: 1px solid rgba(0,188,212,0.3);
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .project-pill .pill-hrs {
+      color: var(--amber);
+      font-weight: 700;
+    }
+
+    .no-projects {
+      opacity: 0.4;
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+
+    /* ============================================================
+       META (timer + timestamp)
+    ============================================================ */
+    .meta {
+      position: fixed;
+      bottom: 16px;
+      right: 20px;
+      text-align: right;
+      font-size: 0.75rem;
+      opacity: 0.4;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Zinc Hackathon — Hours Saved</h1>
+    <p class="subtitle">March 9 2026 &nbsp;·&nbsp; Build day</p>
+  </div>
+
+  <div class="counter">
+    <div class="hours-num" id="hours-num">0</div>
+    <div class="hours-label">hours saved</div>
+    <div class="target" id="target-label">Target: 80 hrs</div>
+  </div>
+
+  <!-- PINT GLASS SVG
+       The glass shape is a trapezoid: wider at top, narrower at bottom.
+       ViewBox: 0 0 200 400
+       Glass inner area (where beer fills): x=30..170 at top, x=50..150 at bottom
+       We use a clipPath to mask the fill rects to the glass shape.
+  -->
+  <div class="glass-wrapper">
+    <svg class="glass-svg" viewBox="0 0 200 420" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Clip to glass inner shape -->
+        <clipPath id="glass-clip">
+          <!-- Trapezoid: top-left(28,10) top-right(172,10) bottom-right(148,400) bottom-left(52,400) -->
+          <polygon points="28,10 172,10 148,400 52,400" />
+        </clipPath>
+
+        <!-- Gradient for beer depth -->
+        <linearGradient id="beer-grad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stop-color="#d4881a" />
+          <stop offset="40%"  stop-color="#F5A623" />
+          <stop offset="100%" stop-color="#f0c060" />
+        </linearGradient>
+
+        <!-- Shine gradient on glass -->
+        <linearGradient id="shine-grad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"  stop-color="white" stop-opacity="0.12" />
+          <stop offset="40%" stop-color="white" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+
+      <!-- Beer fill (clipped to glass) -->
+      <g clip-path="url(#glass-clip)">
+        <!-- Beer rect — JS updates y and height -->
+        <rect id="beer-fill" x="0" y="400" width="200" height="0" fill="url(#beer-grad)" />
+
+        <!-- Foam layer on top of beer -->
+        <rect id="foam-fill" x="0" y="400" width="200" height="14" rx="4" />
+
+        <!-- Bubbles — 7 of them at different x positions and speeds -->
+        <circle class="bubble" cx="65"  cy="380" r="3" style="animation-duration:3.1s; animation-delay:0s" />
+        <circle class="bubble" cx="90"  cy="360" r="2" style="animation-duration:2.4s; animation-delay:0.7s" />
+        <circle class="bubble" cx="115" cy="390" r="3" style="animation-duration:3.8s; animation-delay:1.2s" />
+        <circle class="bubble" cx="78"  cy="370" r="2" style="animation-duration:2.9s; animation-delay:0.3s" />
+        <circle class="bubble" cx="135" cy="385" r="2" style="animation-duration:3.3s; animation-delay:1.8s" />
+        <circle class="bubble" cx="100" cy="395" r="3" style="animation-duration:2.6s; animation-delay:2.1s" />
+        <circle class="bubble" cx="55"  cy="375" r="2" style="animation-duration:4.0s; animation-delay:0.9s" />
+
+        <!-- Overflow drip (shown when complete) -->
+        <g id="overflow">
+          <rect x="0" y="0" width="200" height="20" fill="url(#beer-grad)" opacity="0.8" />
+        </g>
+      </g>
+
+      <!-- Glass outline (drawn on top so it appears in front of beer) -->
+      <polygon
+        points="28,10 172,10 148,400 52,400"
+        fill="none"
+        stroke="rgba(255,255,255,0.25)"
+        stroke-width="3"
+        stroke-linejoin="round"
+      />
+
+      <!-- Rim at top -->
+      <rect x="22" y="6" width="156" height="10" rx="5"
+        fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3" />
+
+      <!-- Base -->
+      <rect x="46" y="396" width="108" height="14" rx="4"
+        fill="rgba(255,255,255,0.12)" />
+
+      <!-- Shine highlight on left side -->
+      <polygon
+        points="32,18 52,18 36,380 28,380"
+        fill="url(#shine-grad)"
+      />
+
+      <!-- Handle -->
+      <path d="M172,120 Q215,120 215,180 Q215,240 172,240"
+        fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="8" stroke-linecap="round" />
+    </svg>
+  </div>
+
+  <div class="celebration">🍺 FULL PINT! HACKATHON COMPLETE!</div>
+
+  <!-- Project pills -->
+  <div class="projects" id="projects-list">
+    <p class="no-projects" id="no-projects">No hours logged yet — get building!</p>
+  </div>
+
+  <!-- Meta info -->
+  <div class="meta">
+    <div id="refresh-timer">Refreshing in 30s</div>
+    <div id="last-updated">–</div>
+  </div>
+
+<script>
+  // ============================================================
+  // CONFIG — matches server.js TARGET_HOURS
+  // ============================================================
+  const REFRESH_INTERVAL = 30; // seconds
+  const GLASS_TOP_Y    = 10;   // SVG y of top of beer area
+  const GLASS_BOTTOM_Y = 400;  // SVG y of bottom of beer area
+  const GLASS_HEIGHT   = GLASS_BOTTOM_Y - GLASS_TOP_Y; // 390px
+
+  // ============================================================
+
+  let countdown = REFRESH_INTERVAL;
+  let confettiFired = false;
+
+  function updateGlass(total, target) {
+    const pct = Math.min(total / target, 1.0);
+    const fillH = Math.round(pct * GLASS_HEIGHT);
+    const beerY = GLASS_BOTTOM_Y - fillH;
+
+    const beerFill = document.getElementById('beer-fill');
+    const foamFill = document.getElementById('foam-fill');
+
+    beerFill.setAttribute('y', beerY);
+    beerFill.setAttribute('height', fillH);
+
+    if (pct > 0.05) {
+      foamFill.style.opacity = '1';
+      foamFill.setAttribute('y', beerY - 12);
+      foamFill.setAttribute('height', 14);
+    } else {
+      foamFill.style.opacity = '0';
+    }
+  }
+
+  function updateProjects(projects) {
+    const list = document.getElementById('projects-list');
+    const noP  = document.getElementById('no-projects');
+
+    if (!projects || projects.length === 0) {
+      list.innerHTML = '<p class="no-projects" id="no-projects">No hours logged yet — get building!</p>';
+      return;
+    }
+
+    noP && noP.remove();
+    list.innerHTML = '';
+    projects.forEach(p => {
+      const pill = document.createElement('div');
+      pill.className = 'project-pill';
+      pill.innerHTML = `<span>${p.name}</span><span class="pill-hrs">+${p.hours}h</span>`;
+      list.appendChild(pill);
+    });
+  }
+
+  function celebrate() {
+    document.body.classList.add('complete');
+    if (!confettiFired) {
+      confettiFired = true;
+      // Burst of confetti
+      confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ['#F5A623','#00BCD4','#FFD700','#ffffff'] });
+      setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { y: 0.3 } }), 500);
+    }
+  }
+
+  async function fetchAndUpdate() {
+    try {
+      const res  = await fetch('/api/hours');
+      const data = await res.json();
+
+      const { total = 0, target = 80, projects = [] } = data;
+
+      // Update counter
+      document.getElementById('hours-num').textContent = total;
+      document.getElementById('target-label').textContent = `Target: ${target} hrs`;
+
+      // Update glass
+      updateGlass(total, target);
+
+      // Update project pills
+      updateProjects(projects);
+
+      // Celebration
+      if (total >= target) celebrate();
+
+      // Timestamp
+      document.getElementById('last-updated').textContent =
+        'Updated ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+    } catch (err) {
+      console.error('Fetch error:', err);
+    }
+  }
+
+  // Countdown timer
+  function tick() {
+    countdown--;
+    document.getElementById('refresh-timer').textContent = `Refreshing in ${countdown}s`;
+    if (countdown <= 0) {
+      countdown = REFRESH_INTERVAL;
+      fetchAndUpdate();
+    }
+  }
+
+  // Init
+  fetchAndUpdate();
+  setInterval(tick, 1000);
+</script>
+</body>
+</html>
