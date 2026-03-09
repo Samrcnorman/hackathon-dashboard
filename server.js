@@ -6,7 +6,7 @@ const path = require('path');
 // ============================================================
 // EDIT THESE
 // ============================================================
-const TARGET_HOURS = 80;
+const TARGET_HOURS = 1000;
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const DATABASE_ID = process.env.DATABASE_ID || '261b5fdbc0bc8095beddf87ab7ac74b0';
 const PORT = process.env.PORT || 3000;
@@ -21,8 +21,16 @@ app.get('/api/hours', async (req, res) => {
       `https://api.notion.com/v1/databases/${DATABASE_ID}/query`,
       {
         filter: {
-          property: 'Hackathon?',
-          checkbox: { equals: true }
+          and: [
+            {
+              property: 'Hackathon?',
+              checkbox: { equals: true }
+            },
+            {
+              property: 'Status',
+              status: { equals: 'Done' }
+            }
+          ]
         }
       },
       {
